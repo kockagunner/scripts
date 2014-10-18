@@ -7,61 +7,6 @@
 ##### ##### #   # #   # ##### #  #
 
 ----------------------------------*/
-init()
-{
-	maps = [];
-	maps[maps.size] = "mp_crash";
-	maps[maps.size] = "mp_crash_snow";
-	maps[maps.size] = "mp_bloc";
-	maps[maps.size] = "mp_bog";
-	maps[maps.size] = "mp_backlot";
-	maps[maps.size] = "mp_broadcast";
-	maps[maps.size] = "mp_carentan";
-	maps[maps.size] = "mp_cargoship";
-	maps[maps.size] = "mp_citystreets";
-	maps[maps.size] = "mp_convoy";
-	maps[maps.size] = "mp_countdown";
-	maps[maps.size] = "mp_creek";
-	maps[maps.size] = "mp_crossfire";
-	maps[maps.size] = "mp_farm";
-	maps[maps.size] = "mp_killhouse";
-	maps[maps.size] = "mp_overgrown";
-	maps[maps.size] = "mp_pipeline";
-	maps[maps.size] = "mp_shipment";
-	maps[maps.size] = "mp_showdown";
-	maps[maps.size] = "mp_strike";
-	maps[maps.size] = "mp_vacant";
-
-	if(getdvar("mapnum") == "")
-	{
-		setdvar("mapnum",0);
-		nextmap1=0;
-		nextmap2=1;
-		nextmap3=2;
-	}
-	else
-	{
-		if(isDefined(maps[getdvarInt("mapnum")]))
-			nextmap1=getdvarInt("mapnum");
-		else
-			nextmap1=0;
-
-		if(isDefined(maps[nextmap1+1]))
-			nextmap2=nextmap1+1;
-		else
-			nextmap2=0;
-
-		if(isDefined(maps[nextmap2+1]))
-			nextmap3=nextmap2+1;
-		else
-			nextmap3=0;
-	}
-	setdvar("mapnum",nextmap3+1);
-
-	level.nextmap1=maps[nextmap1];
-	level.nextmap2=maps[nextmap2];
-	level.nextmap3=maps[nextmap3];
-}
 MapRegistry(map)
 {
 	switch(map)
@@ -165,49 +110,84 @@ addMapvoteText(x,y,a,ft,f,c,t)
 }
 start()
 {
+	//ONLY DEBUG
+	//level.players=level.p;
+	//setDvar("sv_maprotation","gametype dm map mp_crash gametype tdm map mp_crash gametype dm map mp_backlot gametype tdm map mp_backlot gametype dm map mp_bog gametype tdm map mp_bog gametype dm map mp_strike gametype tdm map mp_strike");
+
+	maps=[];
+	type=[];
+	rotation=strtok(getDvar("sv_maprotation")," ");
+	for(i=0;i<rotation.size;i++)
+	{
+		gt=getdvar("g_gametype");
+		if(rotation[i]=="gametype")
+		{
+			gt=rotation[i+1];
+			i+=2;
+		}	
+		if(isDefined(rotation[i]) && rotation[i]=="map")
+		{
+			type[maps.size]=gt;
+			if(isDefined(rotation[i+1]))
+				maps[maps.size]=rotation[i+1];
+			else
+				maps[maps.size]=getdvar("mapname");
+
+			i++;
+		}
+	}
 	if(level.players.size>0)
 	{
 		level.mapvote["1"] = 0;
 		level.mapvote["2"] = 0;
 		level.mapvote["3"] = 0;
+		level.mapvote["4"] = 0;
+		level.mapvote["5"] = 0;
 		for(i=0;i<level.players.size;i++)
-			level.players[i] thread PlayerVote();
+			level.players[i] thread PlayerVote(maps,type);
 
 		for(t=20;t>=0;t--)
 		{
 			for(i=0;i<level.players.size;i++)
 			{
-				level.players[i].hud_mapvote[13] setValue(t);
+				level.players[i].hud_mapvote[15] setValue(t);
 				if(t==5)
-					level.players[i].hud_mapvote[13].label=&"Time left: ^1&&1";
+					level.players[i].hud_mapvote[15].label=&"Time left: ^1&&1";
 				if(t<6)
 					level.players[i] playlocalsound("ui_mp_timer_countdown");
 			}
 			wait 1;
 		}
 		wait 0.5;
-		newmap=level.nextmap1;
-		newstr=MapRegistry(level.nextmap1);
+		newmap=0;
 		topvote=level.mapvote["1"];
 		if(level.mapvote["2"]>topvote)
 		{
-			newmap=level.nextmap2;
-			newstr=MapRegistry(level.nextmap2);
+			newmap=1;
 			topvote=level.mapvote["2"];
 		}
 		if(level.mapvote["3"]>topvote)
 		{
-			newmap=level.nextmap3;
-			newstr=MapRegistry(level.nextmap3);
+			newmap=2;
+			topvote=level.mapvote["3"];
 		}
-		setdvar("sv_maprotationcurrent", "map "+newmap);
-		iprintlnbold("^1Nextmap: ^2"+newstr);
+		if(level.mapvote["4"]>topvote)
+		{
+			newmap=3;
+			topvote=level.mapvote["4"];
+		}
+		if(level.mapvote["5"]>topvote)
+		{
+			newmap=4;
+		}
+		setdvar("sv_maprotationcurrent", "g_gametype "+type[newmap]+" map "+maps[newmap]);
+		iprintlnbold("Nextmap: ^2"+MapRegistry(maps[newmap])+"^3("+type[newmap]+")");
 
 		thread deleteHuds();
-		wait 1;
+		wait 3;
 	}
 	else
-		setdvar("sv_maprotationcurrent", "map "+level.nextmap1);
+		setdvar("sv_maprotationcurrent", "g_gametype "+type[0]+" map "+maps[0]);
 }
 deleteHuds()
 {
@@ -233,7 +213,7 @@ deleteHuds()
 		}
 	}
 }
-PlayerVote()
+PlayerVote(maps,type)
 {
 self endon("disconnect");
 self endon("vote_end");
@@ -252,14 +232,22 @@ self endon("vote_end");
 	self thread addMapvoteShader(2,-130,0,1,140,1,(0.4,0.4,0.4));
 	self thread addMapvoteShader(2,60,-10,1,120,1,(0.4,0.4,0.4));
 	self thread addMapvoteShader(2,130,0,1,140,1,(0.4,0.4,0.4));
-	self thread addMapvoteText(-125,-55,"left","default",2,(0.5, 0, 0),"Nextmap");
-	self thread addMapvoteText(95,-55,"center","default",1.8,(0.5, 0, 0),"Votes");
-	self thread addMapvoteText(-35,-25,"center","objective",1.4,(1, 1, 1),MapRegistry(level.nextmap1));
-	self thread addMapvoteText(-35,5,"center","objective",1.4,(1, 1, 1),MapRegistry(level.nextmap2));
-	self thread addMapvoteText(-35,35,"center","objective",1.4,(1, 1, 1),MapRegistry(level.nextmap3));
+
+	self thread addMapvoteText(-125,-55,"left","default",2,(1, 1, 1),"Nextmap");
+	self thread addMapvoteText(95,-55,"center","default",1.8,(1, 1, 1),"Votes");
+
+	self thread addMapvoteText(-35,-25,"center","objective",1.4,(1, 1, 1),MapRegistry(maps[0])+"^3("+type[0]+")");
+	self thread addMapvoteText(-35,-10,"center","objective",1.4,(1, 1, 1),MapRegistry(maps[1])+"^3("+type[1]+")");
+	self thread addMapvoteText(-35,5,"center","objective",1.4,(1, 1, 1),MapRegistry(maps[2])+"^3("+type[2]+")");
+	self thread addMapvoteText(-35,20,"center","objective",1.4,(1, 1, 1),MapRegistry(maps[3])+"^3("+type[3]+")");
+	self thread addMapvoteText(-35,35,"center","objective",1.4,(1, 1, 1),MapRegistry(maps[4])+"^3("+type[4]+")");
+
 	self thread addMapvoteLabel(-125,60,"left","default",1.4,(1, 1, 1),&"Time left: ^2&&1",20);
+
 	self thread addMapvoteLabel(95,-25,"center","objective",1.4,(1, 1, 1),&"&&1",0);
+	self thread addMapvoteLabel(95,-10,"center","objective",1.4,(1, 1, 1),&"&&1",0);
 	self thread addMapvoteLabel(95,5,"center","objective",1.4,(1, 1, 1),&"&&1",0);
+	self thread addMapvoteLabel(95,20,"center","objective",1.4,(1, 1, 1),&"&&1",0);
 	self thread addMapvoteLabel(95,35,"center","objective",1.4,(1, 1, 1),&"&&1",0);
 
 	choice="none";
@@ -286,8 +274,18 @@ self endon("vote_end");
 			}
 			else if(choice=="3")
 			{
+				choice="4";
+				self setVote("4","3");
+			}
+			else if(choice=="4")
+			{
+				choice="5";
+				self setVote("5","4");
+			}
+			else if(choice=="5")
+			{
 				choice="1";
-				self setVote("1","3");
+				self setVote("1","5");
 			}
 			self playLocalSound("mouse_click");
 			wait 0.1;
@@ -302,9 +300,11 @@ setVote(s,p)
 	level.mapvote[s]++;
 	switch(s)
 	{
-	case "1":self setVoteHud(1,0,0);break;
-	case "2":self setVoteHud(0,1,0);break;
-	case "3":self setVoteHud(0,0,1);break;
+	case "1":self setVoteHud(1,0,0,0,0);break;
+	case "2":self setVoteHud(0,1,0,0,0);break;
+	case "3":self setVoteHud(0,0,1,0,0);break;
+	case "4":self setVoteHud(0,0,0,1,0);break;
+	case "5":self setVoteHud(0,0,0,0,1);break;
 	default:break;
 	}
 	updateVotes();
@@ -313,38 +313,58 @@ updateVotes()
 {
 	for(i=0;i<level.players.size;i++)
 	{
-		if(isDefined(level.players[i].hud_mapvote[14]))
-			level.players[i].hud_mapvote[14] setValue(level.mapvote["1"]);
-		if(isDefined(level.players[i].hud_mapvote[15]))
-			level.players[i].hud_mapvote[15] setValue(level.mapvote["2"]);
 		if(isDefined(level.players[i].hud_mapvote[16]))
-			level.players[i].hud_mapvote[16] setValue(level.mapvote["3"]);
+			level.players[i].hud_mapvote[16] setValue(level.mapvote["1"]);
+		if(isDefined(level.players[i].hud_mapvote[17]))
+			level.players[i].hud_mapvote[17] setValue(level.mapvote["2"]);
+		if(isDefined(level.players[i].hud_mapvote[18]))
+			level.players[i].hud_mapvote[18] setValue(level.mapvote["3"]);
+		if(isDefined(level.players[i].hud_mapvote[19]))
+			level.players[i].hud_mapvote[19] setValue(level.mapvote["4"]);
+		if(isDefined(level.players[i].hud_mapvote[20]))
+			level.players[i].hud_mapvote[20] setValue(level.mapvote["5"]);
 	}
 }
-setVoteHud(x,y,z)
+setVoteHud(x,y,z,a,b)
 {
 	self.hud_mapvote[10].glowAlpha = x;
 	self.hud_mapvote[11].glowAlpha = y;
 	self.hud_mapvote[12].glowAlpha = z;
-	self.hud_mapvote[14].glowAlpha = self.hud_mapvote[10].glowAlpha;
-	self.hud_mapvote[15].glowAlpha = self.hud_mapvote[11].glowAlpha;
-	self.hud_mapvote[16].glowAlpha = self.hud_mapvote[12].glowAlpha;
+	self.hud_mapvote[13].glowAlpha = a;
+	self.hud_mapvote[14].glowAlpha = b;
+	self.hud_mapvote[16].glowAlpha = self.hud_mapvote[10].glowAlpha;
+	self.hud_mapvote[17].glowAlpha = self.hud_mapvote[11].glowAlpha;
+	self.hud_mapvote[18].glowAlpha = self.hud_mapvote[12].glowAlpha;
+	self.hud_mapvote[19].glowAlpha = self.hud_mapvote[13].glowAlpha;
+	self.hud_mapvote[20].glowAlpha = self.hud_mapvote[14].glowAlpha;
+
+	bg=(1,0.8,0.4);
 
 	if(self.hud_mapvote[10].glowAlpha>0)
-		self.hud_mapvote[10].color=(1,0.5,0);
+		self.hud_mapvote[10].color=(bg);
 	else
 		self.hud_mapvote[10].color=(1,1,1);
 	if(self.hud_mapvote[11].glowAlpha>0)
-		self.hud_mapvote[11].color=(1,0.5,0);
+		self.hud_mapvote[11].color=(bg);
 	else
 		self.hud_mapvote[11].color=(1,1,1);
 	if(self.hud_mapvote[12].glowAlpha>0)
-		self.hud_mapvote[12].color=(1,0.5,0);
+		self.hud_mapvote[12].color=(bg);
 	else
 		self.hud_mapvote[12].color=(1,1,1);
+	if(self.hud_mapvote[13].glowAlpha>0)
+		self.hud_mapvote[13].color=(bg);
+	else
+		self.hud_mapvote[13].color=(1,1,1);
+	if(self.hud_mapvote[14].glowAlpha>0)
+		self.hud_mapvote[14].color=(bg);
+	else
+		self.hud_mapvote[14].color=(1,1,1);
 
-	self.hud_mapvote[14].color=self.hud_mapvote[10].color;
-	self.hud_mapvote[15].color=self.hud_mapvote[11].color;
-	self.hud_mapvote[16].color=self.hud_mapvote[12].color;
+	self.hud_mapvote[16].color=self.hud_mapvote[10].color;
+	self.hud_mapvote[17].color=self.hud_mapvote[11].color;
+	self.hud_mapvote[18].color=self.hud_mapvote[12].color;
+	self.hud_mapvote[19].color=self.hud_mapvote[13].color;
+	self.hud_mapvote[20].color=self.hud_mapvote[14].color;
 
 }
