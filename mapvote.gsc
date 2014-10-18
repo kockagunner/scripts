@@ -165,12 +165,12 @@ addMapvoteText(x,y,a,ft,f,c,t)
 }
 start()
 {
-	if(level.playerslayers.size>0)
+	if(level.players.size>0)
 	{
 		level.mapvote["1"] = 0;
 		level.mapvote["2"] = 0;
 		level.mapvote["3"] = 0;
-		for(i=0;i<level.playerslayers.size;i++)
+		for(i=0;i<level.players.size;i++)
 			level.players[i] thread PlayerVote();
 
 		for(t=20;t>=0;t--)
