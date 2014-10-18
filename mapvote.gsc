@@ -165,23 +165,23 @@ addMapvoteText(x,y,a,ft,f,c,t)
 }
 start()
 {
-	if(level.p.size>0)
+	if(level.playerslayers.size>0)
 	{
 		level.mapvote["1"] = 0;
 		level.mapvote["2"] = 0;
 		level.mapvote["3"] = 0;
-		for(i=0;i<level.p.size;i++)
-			level.p[i] thread PlayerVote();
+		for(i=0;i<level.playerslayers.size;i++)
+			level.players[i] thread PlayerVote();
 
 		for(t=20;t>=0;t--)
 		{
-			for(i=0;i<level.p.size;i++)
+			for(i=0;i<level.players.size;i++)
 			{
-				level.p[i].hud_mapvote[13] setValue(t);
+				level.players[i].hud_mapvote[13] setValue(t);
 				if(t==5)
-					level.p[i].hud_mapvote[13].label=&"Time left: ^1&&1";
+					level.players[i].hud_mapvote[13].label=&"Time left: ^1&&1";
 				if(t<6)
-					level.p[i] playlocalsound("ui_mp_timer_countdown");
+					level.players[i] playlocalsound("ui_mp_timer_countdown");
 			}
 			wait 1;
 		}
@@ -211,25 +211,25 @@ start()
 }
 deleteHuds()
 {
-	for(i=0;i<level.p.size;i++)
+	for(i=0;i<level.players.size;i++)
 	{
-		level.p[i] notify("vote_end");
-		if(isDefined(level.p[i].hud_mapvote))
+		level.players[i] notify("vote_end");
+		if(isDefined(level.players[i].hud_mapvote))
 		{
-			for(j=0;j<level.p[i].hud_mapvote.size;j++)
+			for(j=0;j<level.players[i].hud_mapvote.size;j++)
 			{
-				level.p[i].hud_mapvote[j] fadeOverTime(1);
-				level.p[i].hud_mapvote[j].alpha = 0;
+				level.players[i].hud_mapvote[j] fadeOverTime(1);
+				level.players[i].hud_mapvote[j].alpha = 0;
 			}
 		}
 	}
 	wait 1;
-	for(i=0;i<level.p.size;i++)
+	for(i=0;i<level.players.size;i++)
 	{
-		if(isDefined(level.p[i].hud_mapvote))
+		if(isDefined(level.players[i].hud_mapvote))
 		{
-			for(j=0;j<level.p[i].hud_mapvote.size;j++)
-				level.p[i].hud_mapvote[j] destroy();
+			for(j=0;j<level.players[i].hud_mapvote.size;j++)
+				level.players[i].hud_mapvote[j] destroy();
 		}
 	}
 }
@@ -311,14 +311,14 @@ setVote(s,p)
 }
 updateVotes()
 {
-	for(i=0;i<level.p.size;i++)
+	for(i=0;i<level.players.size;i++)
 	{
-		if(isDefined(level.p[i].hud_mapvote[14]))
-			level.p[i].hud_mapvote[14] setValue(level.mapvote["1"]);
-		if(isDefined(level.p[i].hud_mapvote[15]))
-			level.p[i].hud_mapvote[15] setValue(level.mapvote["2"]);
-		if(isDefined(level.p[i].hud_mapvote[16]))
-			level.p[i].hud_mapvote[16] setValue(level.mapvote["3"]);
+		if(isDefined(level.players[i].hud_mapvote[14]))
+			level.players[i].hud_mapvote[14] setValue(level.mapvote["1"]);
+		if(isDefined(level.players[i].hud_mapvote[15]))
+			level.players[i].hud_mapvote[15] setValue(level.mapvote["2"]);
+		if(isDefined(level.players[i].hud_mapvote[16]))
+			level.players[i].hud_mapvote[16] setValue(level.mapvote["3"]);
 	}
 }
 setVoteHud(x,y,z)
